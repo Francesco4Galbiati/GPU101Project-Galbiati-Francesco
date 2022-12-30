@@ -227,7 +227,7 @@ __global__ void symgs_csr_hw_fdo(int* row_ptr, int* col_ind, float* values, floa
 			done[row] = 1;
 			atomicAdd(c, 1);
 		}
-	}
+   	 }
 }
 
 __global__ void symgs_csr_hw_bdo(int* row_ptr, int* col_ind, float* values, float* tmp, float* x, float* matrixDiagonal, int* ready, int* done, int* c){
