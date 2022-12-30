@@ -310,57 +310,57 @@ int main(int argc, const char *argv[])
     CHECK(cudaMalloc(&matrixDiagonal_hw, num_rows * sizeof(float)));
     CHECK(cudaMalloc(&x_hw, num_rows * sizeof(float)));
     CHECK(cudaMalloc(&tmp, num_rows * sizeof(float)));
-	CHECK(cudaMalloc(&ready, num_rows * sizeof(int)));
-	CHECK(cudaMalloc(&done, num_rows * sizeof(int)));
-	CHECK(cudaMalloc(&count_hw, sizeof(int)));
+    CHECK(cudaMalloc(&ready, num_rows * sizeof(int)));
+    CHECK(cudaMalloc(&done, num_rows * sizeof(int)));
+    CHECK(cudaMalloc(&count_hw, sizeof(int)));
 
     CHECK(cudaMemcpy(row_ptr_hw, row_ptr, (num_rows + 1) * sizeof(int), cudaMemcpyHostToDevice));
     CHECK(cudaMemcpy(col_ind_hw, col_ind, num_vals * sizeof(int), cudaMemcpyHostToDevice));
     CHECK(cudaMemcpy(values_hw, values, num_vals * sizeof(float), cudaMemcpyHostToDevice));
     CHECK(cudaMemcpy(matrixDiagonal_hw, matrixDiagonal, num_rows * sizeof(float), cudaMemcpyHostToDevice));
     CHECK(cudaMemcpy(x_hw, x_gpu, num_rows * sizeof(float), cudaMemcpyHostToDevice));
-	CHECK(cudaMemset(done, 0, num_rows * sizeof(int)));
-	CHECK(cudaMemset(count_hw, 0, sizeof(int)));
+    CHECK(cudaMemset(done, 0, num_rows * sizeof(int)));
+    CHECK(cudaMemset(count_hw, 0, sizeof(int)));
 
-	start_gpu = get_time();
-	int count = 0;
-	//forward sweep
-	while(count < num_rows){
-		symgs_csr_hw_fready<<<(num_rows / THREADSPERBLOCKR) + 1, THREADSPERBLOCKR>>>(row_ptr_hw, col_ind_hw, ready, done, num_rows);
-		CHECK_KERNELCALL();
-		CHECK(cudaDeviceSynchronize());
-		symgs_csr_hw_fdo<<<num_rows, THREADSPERBLOCKD>>>(row_ptr_hw, col_ind_hw, values_hw, tmp, x_hw, matrixDiagonal_hw, ready, done, count_hw);
-		CHECK_KERNELCALL();
-		CHECK(cudaDeviceSynchronize());
-		cudaMemcpy(&count, count_hw, sizeof(int), cudaMemcpyDeviceToHost);
-	}
-	CHECK(cudaMemset(done, 0, num_rows * sizeof(int)));
-	CHECK(cudaMemset(count_hw, 0, sizeof(int)));
-	count = 0;
-	//backward sweep
-	while(count < num_rows){
-		symgs_csr_hw_bready<<<(num_rows / THREADSPERBLOCKR) + 1, THREADSPERBLOCKR>>>(row_ptr_hw, col_ind_hw, ready, done, num_rows);
-		CHECK_KERNELCALL();
-		CHECK(cudaDeviceSynchronize());
-		symgs_csr_hw_bdo<<<num_rows, THREADSPERBLOCKD>>>(row_ptr_hw, col_ind_hw, values_hw, x_hw, tmp, matrixDiagonal_hw, ready, done, count_hw);
-		CHECK_KERNELCALL();
-		CHECK(cudaDeviceSynchronize());
-		cudaMemcpy(&count, count_hw, sizeof(int), cudaMemcpyDeviceToHost);
-	}
+    start_gpu = get_time();
+    int count = 0;
+    //forward sweep
+    while(count < num_rows){
+	    symgs_csr_hw_fready<<<(num_rows / THREADSPERBLOCKR) + 1, THREADSPERBLOCKR>>>(row_ptr_hw, col_ind_hw, ready, done, num_rows);
+	    CHECK_KERNELCALL();
+	    CHECK(cudaDeviceSynchronize());
+	    symgs_csr_hw_fdo<<<num_rows, THREADSPERBLOCKD>>>(row_ptr_hw, col_ind_hw, values_hw, tmp, x_hw, matrixDiagonal_hw, ready, done, count_hw);
+	    CHECK_KERNELCALL();
+	    CHECK(cudaDeviceSynchronize());
+	    cudaMemcpy(&count, count_hw, sizeof(int), cudaMemcpyDeviceToHost);
+    }
+    CHECK(cudaMemset(done, 0, num_rows * sizeof(int)));
+    CHECK(cudaMemset(count_hw, 0, sizeof(int)));
+    count = 0;
+    //backward sweep
+    while(count < num_rows){
+	    symgs_csr_hw_bready<<<(num_rows / THREADSPERBLOCKR) + 1, THREADSPERBLOCKR>>>(row_ptr_hw, col_ind_hw, ready, done, num_rows);
+	    CHECK_KERNELCALL();
+	    CHECK(cudaDeviceSynchronize());
+	    symgs_csr_hw_bdo<<<num_rows, THREADSPERBLOCKD>>>(row_ptr_hw, col_ind_hw, values_hw, x_hw, tmp, matrixDiagonal_hw, ready, done, count_hw);
+	    CHECK_KERNELCALL();
+	    CHECK(cudaDeviceSynchronize());
+	    cudaMemcpy(&count, count_hw, sizeof(int), cudaMemcpyDeviceToHost);
+    }
     end_gpu = get_time();
-	cudaMemcpy(x_gpu, x_hw, num_rows * sizeof(float), cudaMemcpyDeviceToHost);
+    cudaMemcpy(x_gpu, x_hw, num_rows * sizeof(float), cudaMemcpyDeviceToHost);
     printf("SYMGS Time GPU: %.10lf\n", end_gpu - start_gpu);
 	
-	float num = 0.0;
-	float acc;
+    float num = 0.0;
+    float acc;
     for(int i = 0; i < num_rows; i++){
         if(x_gpu[i] - x[i] > 0.001 || x_gpu[i] - x[i] < -0.001){
 			num += 1;
         }
     }
-	acc = (num / num_rows) * 100;
+    acc = (num / num_rows) * 100;
 	
-	printf("%d risultati su %d hanno un errore superiore a 10^-3, precisione del %f%%\n", (int)num, num_rows, 100.0 - acc);
+    printf("%d risultati su %d hanno un errore superiore a 10^-3, precisione del %f%%\n", (int)num, num_rows, 100.0 - acc);
 
     // Free
     free(row_ptr);
@@ -374,6 +374,10 @@ int main(int argc, const char *argv[])
     CHECK(cudaFree(values_hw));
     CHECK(cudaFree(matrixDiagonal_hw));
     CHECK(cudaFree(x_hw));
+    CHECK(cudaFree(ready));
+    CHECK(cudaFree(done));
+    CHECK(cudaFree(tmp));
+    CHECK(cudaFree(count_hw));
 
     return 0;
 }
